@@ -1,14 +1,15 @@
-from typing import Optional
-import attr
-import re
+from os.path import join
 import time
 
 from pydrake.solvers.mathematicalprogram import MathematicalProgram  # type: ignore
 from py_factor_graph.factor_graph import FactorGraphData
+from py_factor_graph.parse_factor_graph import (
+    parse_efg_file,
+    parse_pickle_file,
+)
 
-import ro_slam.utils.drake_utils as du
-from ro_slam.utils.plot_utils import plot_error
-from ro_slam.utils.solver_utils import (
+import score.utils.drake_utils as du
+from score.utils.solver_utils import (
     QcqpSolverParams,
     SolverResults,
     save_results_to_file,
@@ -148,14 +149,54 @@ def solve_mle_qcqp(
             results_filepath,
         )
 
-    grid_size_search = re.search(r"\d+_grid", results_filepath)
-    if grid_size_search is not None:
-        grid_size = int(grid_size_search.group(0).split("_")[0])
-    else:
-        grid_size = 1
-
     # if solver_params.init_technique == "custom":
     #     plot_error(data, solution_vals, grid_size, custom_vals)
     # else:
     #     # do not solve local so only print the relaxed solution
     #     plot_error(data, solution_vals, grid_size)
+
+
+if __name__ == "__main__":
+    solver_params = QcqpSolverParams(
+        solver="gurobi",
+        verbose=True,
+        save_results=True,
+        use_socp_relax=True,
+        use_orthogonal_constraint=False,
+        init_technique="random",
+        custom_init_file=None,
+    )
+
+    import argparse
+
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument(
+        "data_dir", type=str, help="Path to the directory the PyFactorGraph is held in"
+    )
+    arg_parser.add_argument("pyfg_filename", type=str, help="name of the PyFactorGraph")
+    arg_parser.add_argument(
+        "results_dir", type=str, help="Path to the directory the results are saved to"
+    )
+    arg_parser.add_argument(
+        "results_filename", type=str, help="name of the results file"
+    )
+    args = arg_parser.parse_args()
+
+    # get the factor graph filepath
+    results_filetype = "pickle"
+    fg_filepath = join(args.data_dir, args.pyfg_filename)
+
+    if fg_filepath.endswith(".pickle"):
+        fg = parse_pickle_file(fg_filepath)
+    elif fg_filepath.endswith(".fg"):
+        fg = parse_efg_file(fg_filepath)
+    else:
+        raise ValueError(f"Unknown file type: {fg_filepath}")
+    print(f"Loaded data: {fg_filepath}")
+    fg.print_summary()
+
+    # check that the measurements are all good
+    # assert fg.only_good_measurements()
+
+    results_filepath = join(args.results_dir, args.results_filename)
+    solve_mle_qcqp(fg, solver_params, results_filepath)
