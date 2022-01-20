@@ -15,6 +15,7 @@ from score.utils.solver_utils import (
     save_results_to_file,
     load_custom_init_file,
 )
+from score.utils.matrix_utils import get_matrix_determinant
 
 
 def solve_mle_qcqp(
@@ -130,6 +131,19 @@ def solve_mle_qcqp(
     tot_time = t_end - t_start
     print(f"Solved in {tot_time} seconds")
     print(f"Solver success: {result.is_success()}")
+
+    #! small add on to check the quality of the solution via the matrix
+    # determinants
+    check_rotation_determinants = False
+    if check_rotation_determinants:
+        # get list of the determinants of the rotation matrices
+        det_list = []
+        for rot, key in rotations.items():
+            det_list.append(get_matrix_determinant(rot))
+
+        import matplotlib.pyplot as plt
+        plt.plot(det_list)
+        plt.show(block=True)
 
     solution_vals = du.get_solved_values(
         result,

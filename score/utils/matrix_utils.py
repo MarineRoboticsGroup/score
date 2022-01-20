@@ -37,6 +37,17 @@ def apply_transformation_matrix_perturbation(
     # perturb curr pose
     return transformation_matrix @ rand_trans
 
+def get_matrix_determinant(mat: np.ndarray) -> float:
+    """returns the determinant of the matrix
+
+    Args:
+        mat (np.ndarray): [description]
+
+    Returns:
+        float: [description]
+    """
+    _check_square(mat)
+    return float(np.linalg.det(mat))
 
 def round_to_special_orthogonal(mat: np.ndarray) -> np.ndarray:
     """
