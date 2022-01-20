@@ -854,7 +854,8 @@ def get_solved_values(
     pose_chain_names: List[str],
 ) -> SolverResults:
     """
-    Returns the solved values from the result
+    Returns the solved values from the result. Rounds all rotations to
+    the nearest SO(2) matrix.
 
     Args:
         result (Drake Result Object): the result of the solution
