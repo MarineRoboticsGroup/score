@@ -137,12 +137,15 @@ def solve_mle_qcqp(
     check_rotation_determinants = False
     if check_rotation_determinants:
         # get list of the determinants of the rotation matrices
-        det_list = []
-        for rot, key in rotations.items():
-            det_list.append(get_matrix_determinant(rot))
+        det_list = [
+            get_matrix_determinant(result.GetSolution(rotations[key]))
+            for key in rotations.keys()
+        ]
 
         import matplotlib.pyplot as plt
-        plt.plot(det_list)
+
+        x_idxs = [i for i in range(len(det_list))]
+        plt.plot(x_idxs, det_list)
         plt.show(block=True)
 
     solution_vals = du.get_solved_values(
