@@ -3,7 +3,7 @@ import time
 
 from pydrake.solvers.mathematicalprogram import MathematicalProgram  # type: ignore
 from py_factor_graph.factor_graph import FactorGraphData
-from py_factor_graph.parse_factor_graph import (
+from py_factor_graph.parsing import (
     parse_efg_file,
     parse_pickle_file,
 )
