@@ -3,10 +3,9 @@ import time
 
 from pydrake.solvers.mathematicalprogram import MathematicalProgram  # type: ignore
 from py_factor_graph.factor_graph import FactorGraphData
-from py_factor_graph.parsing import (
-    parse_efg_file,
-    parse_pickle_file,
-)
+from py_factor_graph.parsing.parse_pickle_file import parse_pickle_file
+from py_factor_graph.parsing.parse_efg_file import parse_efg_file
+
 
 import score.utils.drake_utils as du
 from score.utils.solver_utils import (
@@ -203,7 +202,7 @@ if __name__ == "__main__":
     results_filetype = "pickle"
     fg_filepath = join(args.data_dir, args.pyfg_filename)
 
-    if fg_filepath.endswith(".pickle"):
+    if fg_filepath.endswith(".pickle") or fg_filepath.endswith(".pkl"):
         fg = parse_pickle_file(fg_filepath)
     elif fg_filepath.endswith(".fg"):
         fg = parse_efg_file(fg_filepath)
