@@ -52,6 +52,11 @@ def solve_mle_qcqp(
             solver_params.use_socp_relax and not solver_params.use_orthogonal_constraint
         ), "Mosek and Gurobi solver only used to solve convex problems"
 
+    unconnected_variables = data.unconnected_variable_names
+    assert (
+        len(unconnected_variables) == 0
+    ), f"Found {unconnected_variables} unconnected variables. "
+
     model = MathematicalProgram()
 
     # form objective function
