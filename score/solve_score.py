@@ -1,6 +1,9 @@
 from os.path import join
 import time
 
+import logging
+logger = logging.getLogger(__name__)
+
 from pydrake.solvers.mathematicalprogram import MathematicalProgram  # type: ignore
 from py_factor_graph.factor_graph import FactorGraphData
 from py_factor_graph.parsing.parse_pickle_file import parse_pickle_file
@@ -150,7 +153,7 @@ def solve_mle_qcqp(
 
         x_idxs = [i for i in range(len(det_list))]
         plt.plot(x_idxs, det_list)
-        plt.show(block=True)
+        plt.show(block=True) # type: ignore
 
     solution_vals = du.get_solved_values(
         result,
@@ -213,7 +216,7 @@ if __name__ == "__main__":
         fg = parse_efg_file(fg_filepath)
     else:
         raise ValueError(f"Unknown file type: {fg_filepath}")
-    print(f"Loaded data: {fg_filepath}")
+    logger.info(f"Loaded data: {fg_filepath}")
     fg.print_summary()
 
     # check that the measurements are all good

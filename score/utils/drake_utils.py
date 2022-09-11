@@ -23,6 +23,9 @@ from pydrake.solvers.mixed_integer_rotation_constraint import (  # type: ignore
     MixedIntegerRotationConstraintGenerator as MIRCGenerator,
 )
 
+import logging
+logger = logging.getLogger(__name__)
+
 # from pydrake.solvers.mixed_integer_optimization_util import IntervalBinning  # type: ignore
 
 ##### Add variables #####
@@ -47,7 +50,7 @@ def add_pose_variables(
     translations: Dict[str, np.ndarray] = {}
     rotations: Dict[str, np.ndarray] = {}
 
-    print("Adding pose variables")
+    logger.info("Adding pose variables")
     for pose_chain in data.pose_variables:
         num_poses = len(pose_chain)
         for pose_idx in tqdm.trange(num_poses):

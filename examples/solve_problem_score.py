@@ -57,7 +57,7 @@ if __name__ == "__main__":
             fg = parse_efg_file(fg_filepath)
         else:
             raise ValueError(f"Unknown file type: {fg_filepath}")
-        print(f"Loaded data: {fg_filepath}")
+        logger.info(f"Loaded data: {fg_filepath}")
 
         solve_mle_qcqp(fg, solver_params, results_filepath)
     print()
