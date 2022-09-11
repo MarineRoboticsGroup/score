@@ -73,7 +73,7 @@ def plot_error(
         range_circles: List[CircleIntersection] = [
             CircleIntersection() for _ in range(num_landmarks)
         ]
-        range_measures_dict = gt_data.range_measures_dict
+        pose_to_range_measures_dict = gt_data.pose_to_range_measures_dict
 
         # draw range measurements
         range_measure_plot_lines: List[mlines.Line2D] = []
@@ -116,8 +116,8 @@ def plot_error(
                     )
                     pose_init_val_plot_obj.append(init_arrow)
 
-                if pose.name in range_measures_dict:
-                    cur_range_measures = range_measures_dict[pose.name]
+                if pose.name in pose_to_range_measures_dict:
+                    cur_range_measures = pose_to_range_measures_dict[pose.name]
 
                     for range_measure in cur_range_measures:
                         range_var1, range_var2 = range_measure.association
@@ -135,8 +135,8 @@ def plot_error(
                     soln_pose_center = solution_data.translations[pose.name]
                     soln_landmark_center = solution_data.landmarks[landmark.name]
                     range_key = (pose.name, landmark.name)
-                    if color_dist_circles and range_key in range_measures_dict:
-                        arc_radius = range_measures_dict[range_key]
+                    if color_dist_circles and range_key in pose_to_range_measures_dict:
+                        arc_radius = pose_to_range_measures_dict[range_key]
                         dist_circle = Circle(
                             Point(soln_pose_center[0], soln_pose_center[1]), arc_radius
                         )
