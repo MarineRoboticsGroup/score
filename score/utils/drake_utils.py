@@ -72,6 +72,8 @@ def add_pose_variables(
             if orthogonal_constraint:
                 set_orthogonal_constraint(model, rot_var)
 
+    logger.info("Done adding pose variables")
+    assert (translations.keys()) == (rotations.keys())
     return translations, rotations
 
 
@@ -91,12 +93,17 @@ def add_landmark_variables(
     """
     landmarks: Dict[str, np.ndarray] = {}
     num_landmarks = len(data.landmark_variables)
-    print("Adding landmarks")
+    if num_landmarks == 0:
+        logger.warning("No landmark variables to add")
+        return landmarks
+
+    logger.info("Adding landmarks")
     for landmark_idx in tqdm.trange(num_landmarks):
         landmark = data.landmark_variables[landmark_idx]
         name = f"{landmark.name}_translation"
         landmark_var = add_translation_var(model, name, data.dimension)
         landmarks[landmark.name] = landmark_var
+    logger.info("Done adding landmarks")
     return landmarks
 
 
@@ -122,9 +129,13 @@ def add_distance_variables(
         Dict[Tuple[str, str], np.ndarray]: The dict of variables representing
         the distances between the robot's landmarks and the landmarks.
     """
-    distances = {}
+    distances: Dict[Tuple[str, str], np.ndarray] = {}
     num_range_measures = len(data.range_measurements)
-    print("Adding distance variables")
+    if num_range_measures == 0:
+        logger.warning("No range measurements to add")
+        return distances
+
+    logger.info("Adding distance variables")
     for range_measure_idx in tqdm.trange(num_range_measures):
         range_measure = data.range_measurements[range_measure_idx]
         pose_key = range_measure.pose_key
@@ -158,7 +169,7 @@ def add_distance_variables(
             add_drake_distance_equality_constraint(
                 model, trans_i, trans_j, distances[dist_key]
             )
-
+    logger.info("Done adding distance variables")
     return distances
 
 
@@ -411,9 +422,9 @@ def init_rotation_variable(
 
     Args:
         rot (np.ndarray): The rotation variables.
-        mat (np.ndarray): The rotation matrix.
+        mat (np.ndarray): The rotation matrix to initialize to.
     """
-    assert rot.shape == mat.shape
+    assert rot.shape == mat.shape, f"{rot.shape} != {mat.shape}"
     model.SetInitialGuess(rot, mat)
 
 
@@ -445,15 +456,15 @@ def set_rotation_init_compose(
     for odom_chain in data.odom_measurements:
 
         # initialize the first rotation to the identity matrix
-        curr_pose = np.eye(data.dimension)
+        curr_rot = np.eye(data.dimension)
         first_pose_name = odom_chain[0].base_pose
-        init_rotation_variable(model, rotations[first_pose_name], curr_pose)
+        init_rotation_variable(model, rotations[first_pose_name], curr_rot)
 
         for odom_measure in odom_chain:
 
             # update the rotation and initialize the next rotation
-            curr_pose = odom_measure.rotation @ curr_pose
-            init_rotation_variable(model, rotations[odom_measure.to_pose], curr_pose)
+            curr_rot = odom_measure.rotation @ curr_rot
+            init_rotation_variable(model, rotations[odom_measure.to_pose], curr_rot)
 
 
 def set_rotation_init_gt(
@@ -479,7 +490,7 @@ def set_rotation_init_gt(
 
 
 def set_rotation_init_random(
-    model: MathematicalProgram, rotations: Dict[str, np.ndarray]
+    model: MathematicalProgram, rotations: Dict[str, np.ndarray], data: FactorGraphData
 ) -> None:
     """Initializes the rotation variables to random.
 
@@ -489,7 +500,7 @@ def set_rotation_init_random(
     """
     print("Setting rotation initial points to random")
     for pose_key in rotations:
-        rand_rot = get_random_rotation_matrix()
+        rand_rot = get_random_rotation_matrix(dim=data.dimension)
         init_rotation_variable(model, rotations[pose_key], rand_rot)
 
 
@@ -550,7 +561,9 @@ def set_translation_init_compose(
 
 
 def set_translation_init_random(
-    model: MathematicalProgram, translations: Dict[str, np.ndarray]
+    model: MathematicalProgram,
+    translations: Dict[str, np.ndarray],
+    data: FactorGraphData,
 ):
     """initializes the translations to random values
 
@@ -561,7 +574,7 @@ def set_translation_init_random(
     print("Setting translation initial points to random")
     for pose_key in translations:
         init_translation_variable(
-            model, translations[pose_key], get_random_vector(dim=2)
+            model, translations[pose_key], get_random_vector(dim=data.dimension)
         )
 
 
@@ -748,6 +761,7 @@ def set_orthogonal_constraint(model: MathematicalProgram, mat: np.ndarray) -> No
     assert mat.shape[0] == mat.shape[1], "matrix must be square"
     assert mat.shape[0] == 2, "only support 2d matrices right now"
     d = mat.shape[0]
+    logger.warning(f"Setting orthogonal constraint on matrix of size {d}")
 
     for i in range(d):
         for j in range(i, d):

@@ -22,13 +22,13 @@ from py_factor_graph.parsing.parse_efg_file import parse_efg_file
 
 
 import score.utils.drake_utils as du
-from score.utils.solver_utils import (
+from ro_slam.utils.solver_utils import (
     QcqpSolverParams,
     SolverResults,
     save_results_to_file,
     load_custom_init_file,
 )
-from score.utils.matrix_utils import get_matrix_determinant
+from ro_slam.utils.matrix_utils import get_matrix_determinant
 
 
 def solve_mle_qcqp(
@@ -73,20 +73,16 @@ def solve_mle_qcqp(
 
     model = MathematicalProgram()
 
-    # form objective function
+    # Add variables
     translations, rotations = du.add_pose_variables(
         model, data, solver_params.use_orthogonal_constraint
     )
-    print("Added pose variables")
-    assert (translations.keys()) == (rotations.keys())
-
     landmarks = du.add_landmark_variables(model, data)
-    print("Added landmark variables")
     distances = du.add_distance_variables(
         model, data, translations, landmarks, solver_params.use_socp_relax
     )
-    print("Added distance variables")
 
+    # Add costs
     du.add_distances_cost(model, distances, data)
     du.add_odom_cost(model, translations, rotations, data)
     du.add_loop_closure_cost(model, translations, rotations, data)
@@ -96,7 +92,8 @@ def solve_mle_qcqp(
     # du.pin_first_pose(model, translations["B0"], rotations["B0"], data, 1)
     # du.pin_first_pose(model, translations["C0"], rotations["C0"], data, 2)
 
-    du.pin_first_landmark(model, landmarks["L0"], data)
+    if landmarks:
+        du.pin_first_landmark(model, landmarks["L0"], data)
 
     if solver_params.init_technique == "gt":
         du.set_rotation_init_gt(model, rotations, data)
@@ -109,8 +106,8 @@ def solve_mle_qcqp(
         du.set_distance_init_measured(model, distances, data)
         du.set_landmark_init_random(model, landmarks)
     elif solver_params.init_technique == "random":
-        du.set_rotation_init_random(model, rotations)
-        du.set_translation_init_random(model, translations)
+        du.set_rotation_init_random(model, rotations, data)
+        du.set_translation_init_random(model, translations, data)
         du.set_distance_init_random(model, distances)
         du.set_landmark_init_random(model, landmarks)
     elif solver_params.init_technique == "custom":
