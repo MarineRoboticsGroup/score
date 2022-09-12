@@ -1,7 +1,20 @@
 import os
 from os.path import join, expanduser, abspath, realpath
 import sys
+import logging, coloredlogs
 
+logger = logging.getLogger(__name__)
+field_styles = {
+    "filename": {"color": "green"},
+    "filename": {"color": "green"},
+    "levelname": {"bold": True, "color": "black"},
+    "name": {"color": "blue"},
+}
+coloredlogs.install(
+    level="INFO",
+    fmt="[%(filename)s:%(lineno)d] %(name)s %(levelname)s - %(message)s",
+    field_styles=field_styles,
+)
 
 file_dir = os.path.dirname(os.path.realpath(__file__))
 ro_slam_dir = abspath(realpath(join(file_dir, "..")))

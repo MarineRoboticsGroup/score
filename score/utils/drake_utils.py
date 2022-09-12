@@ -24,6 +24,7 @@ from pydrake.solvers.mixed_integer_rotation_constraint import (  # type: ignore
 )
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 # from pydrake.solvers.mixed_integer_optimization_util import IntervalBinning  # type: ignore
