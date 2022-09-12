@@ -4,6 +4,9 @@ from os.path import isfile, dirname, isdir
 from os import makedirs
 import numpy as np
 import attr
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 from ro_slam.utils.matrix_utils import (
@@ -126,7 +129,7 @@ def print_state(
         + f" | Translation: {trans_string}"
         + f" | Rotation: {theta_solve:.2f}"
     )
-    print(status)
+    logger.info(status)
 
 
 def save_results_to_file(
@@ -198,7 +201,7 @@ def save_results_to_file(
             f"The file extension {filepath.split('.')[-1]} is not supported. "
         )
 
-    print(f"Results saved to: {filepath}\n")
+    logger.info(f"Results saved to: {filepath}\n")
 
 
 def save_to_tum(
@@ -236,7 +239,7 @@ def save_to_tum(
 
         # if file already exists we won't write over it
         if isfile(modified_path):
-            print(f"{modified_path} already exists, skipping")
+            logger.warning(f"{modified_path} already exists, skipping")
             continue
 
         with open(modified_path, "w") as f:
@@ -274,7 +277,7 @@ def load_custom_init_file(file_path: str) -> VariableValues:
     assert isfile(file_path), f"File {file_path} does not exist"
     assert file_path.endswith(".pickle"), f"File {file_path} must end with '.pickle'"
 
-    print(f"Loading custom init file: {file_path}")
+    logger.info(f"Loading custom init file: {file_path}")
     with open(file_path, "rb") as f:
         init_dict = pickle.load(f)
         if isinstance(init_dict, SolverResults):

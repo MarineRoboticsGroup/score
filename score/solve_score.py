@@ -1,8 +1,19 @@
 from os.path import join
 import time
 
-import logging
+import logging, coloredlogs
+
 logger = logging.getLogger(__name__)
+field_styles = {
+    "filename": {"color": "green"},
+    "levelname": {"bold": True, "color": "black"},
+    "name": {"color": "blue"},
+}
+coloredlogs.install(
+    level="INFO",
+    fmt="[%(filename)s:%(lineno)d] %(name)s %(levelname)s - %(message)s",
+    field_styles=field_styles,
+)
 
 from pydrake.solvers.mathematicalprogram import MathematicalProgram  # type: ignore
 from py_factor_graph.factor_graph import FactorGraphData
@@ -153,7 +164,7 @@ def solve_mle_qcqp(
 
         x_idxs = [i for i in range(len(det_list))]
         plt.plot(x_idxs, det_list)
-        plt.show(block=True) # type: ignore
+        plt.show(block=True)  # type: ignore
 
     solution_vals = du.get_solved_values(
         result,
