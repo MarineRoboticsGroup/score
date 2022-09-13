@@ -89,8 +89,8 @@ def solve_mle_qcqp(
 
     # pin first pose based on data
     du.pin_first_pose(model, translations["A0"], rotations["A0"], data, 0)
-    # du.pin_first_pose(model, translations["B0"], rotations["B0"], data, 1)
-    # du.pin_first_pose(model, translations["C0"], rotations["C0"], data, 2)
+    du.pin_first_pose(model, translations["B0"], rotations["B0"], data, 1)
+    du.pin_first_pose(model, translations["C0"], rotations["C0"], data, 2)
 
     if landmarks:
         du.pin_first_landmark(model, landmarks["L0"], data)
@@ -136,6 +136,10 @@ def solve_mle_qcqp(
             # model.SetSolverOption(solver.solver_id(), "BarQCPConvTol", 1e-8)
             # model.SetSolverOption(solver.solver_id(), "BarConvTol", 1e-8)
             # model.SetSolverOption(solver.solver_id(), "BarHomogeneous", 1)
+
+            # Set to be numerically conservative:
+            # https://www.gurobi.com/documentation/9.5/refman/numericfocus.html
+            model.SetSolverOption(solver.solver_id(), "NumericFocus", 3)
             pass
 
         result = solver.Solve(model)
@@ -195,7 +199,7 @@ if __name__ == "__main__":
         save_results=True,
         use_socp_relax=True,
         use_orthogonal_constraint=False,
-        init_technique="random",
+        init_technique="gt",
         custom_init_file=None,
     )
 

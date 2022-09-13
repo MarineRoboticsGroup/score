@@ -292,14 +292,14 @@ def add_odom_cost(
 
             # translation component of cost
             # k_ij * ||t_i - t_j - R_i @ t_ij^meas||^2
-            trans_weight = odom_measure.translation_weight
+            trans_weight = odom_measure.translation_precision
             trans_measure = odom_measure.translation_vector
             term = t_j - t_i - (R_i @ trans_measure)
             model.AddQuadraticCost(trans_weight * (term ** 2).sum(), is_convex=True)
 
             # rotation component of cost
             # tau_ij * || R_j - (R_i @ R_ij^\top) ||_\frob
-            rot_weight = odom_measure.rotation_weight
+            rot_weight = odom_measure.rotation_precision
             rot_measure = odom_measure.rotation_matrix
             diff_rot_matrix = R_j - (R_i @ rot_measure)
             model.AddQuadraticCost(
@@ -342,14 +342,14 @@ def add_loop_closure_cost(
 
         # translation component of cost
         # k_ij * ||t_i - t_j - R_i @ t_ij^meas||^2
-        trans_weight = loop_measure.translation_weight
+        trans_weight = loop_measure.translation_precision
         trans_measure = loop_measure.translation_vector
         term = t_j - t_i - (R_i @ trans_measure)
         model.AddQuadraticCost(trans_weight * (term ** 2).sum(), is_convex=True)
 
         # rotation component of cost
         # tau_ij * || R_j - (R_i @ R_ij^\top) ||_\frob
-        rot_weight = loop_measure.rotation_weight
+        rot_weight = loop_measure.rotation_precision
         rot_measure = loop_measure.rotation_matrix
         diff_rot_matrix = R_j - (R_i @ rot_measure)
         model.AddQuadraticCost(
