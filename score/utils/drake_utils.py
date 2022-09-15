@@ -5,6 +5,7 @@ import tqdm  # type: ignore
 from py_factor_graph.factor_graph import FactorGraphData
 from ro_slam.utils.matrix_utils import (
     _check_square,
+    _check_rotation_matrix,
     get_random_vector,
     get_random_rotation_matrix,
     get_rotation_matrix_from_theta,
@@ -13,7 +14,7 @@ from ro_slam.utils.matrix_utils import (
 )
 from ro_slam.utils.solver_utils import SolverResults, VariableValues
 
-from pydrake.solvers.mathematicalprogram import MathematicalProgram, QuadraticConstraint  # type: ignore
+from pydrake.solvers.mathematicalprogram import MathematicalProgram, QuadraticConstraint, LinearEqualityConstraint  # type: ignore
 from pydrake.solvers.mathematicalprogram import MathematicalProgramResult as DrakeResult  # type: ignore
 from pydrake.solvers.ipopt import IpoptSolver  # type: ignore
 from pydrake.solvers.snopt import SnoptSolver  # type: ignore
@@ -185,7 +186,6 @@ def add_distance_var(model: MathematicalProgram, name: str) -> np.ndarray:
         np.ndarray: The variable.
     """
     dist_var = model.NewContinuousVariables(1, name=name)
-    model.AddBoundingBoxConstraint(0, np.inf, dist_var)
     return dist_var
 
 
@@ -203,7 +203,6 @@ def add_rotation_var(model: MathematicalProgram, name: str, dim: int) -> np.ndar
         np.ndarray: The variable representing the rotation of the robot
     """
     rot_var = model.NewContinuousVariables(rows=dim, cols=dim, name=name)
-    model.AddBoundingBoxConstraint(-1, 1, rot_var)
     return rot_var
 
 
@@ -221,7 +220,6 @@ def add_translation_var(model: MathematicalProgram, name: str, dim: int) -> np.n
     """
     assert dim == 2 or dim == 3
     var = model.NewContinuousVariables(rows=dim, name=name)
-    model.AddBoundingBoxConstraint(-np.inf, np.inf, var)
     return var
 
 
@@ -631,9 +629,8 @@ def set_rotation_init_custom(
     """
     print("Setting rotation initial points to custom")
     for pose_key in rotations:
-        rot = float(custom_rotations[pose_key])
-        custom_rot_mat = get_rotation_matrix_from_theta(rot)
-        init_rotation_variable(model, rotations[pose_key], custom_rot_mat)
+        rot = custom_rotations[pose_key]
+        init_rotation_variable(model, rotations[pose_key], rot)
 
 
 def set_translation_init_custom(
@@ -718,23 +715,52 @@ def pin_first_pose(
         data (FactorGraphData): The factor graph data to use to pin the pose
         robot_idx (int): The robot index to pin the pose of
     """
+    pin_nth_pose(model, translation, rotation, data, robot_idx, 0)
+
+
+def pin_nth_pose(
+    model: MathematicalProgram,
+    translation: np.ndarray,
+    rotation: np.ndarray,
+    data: FactorGraphData,
+    robot_idx: int,
+    pose_idx: int,
+    soft_pin: bool = False,
+) -> None:
     _check_square(rotation)
     assert len(translation) == rotation.shape[0]
     assert 0 <= robot_idx < len(data.pose_variables)
 
     # fix translation to true position
-    true_position = np.asarray(data.pose_variables[robot_idx][0].true_position)
-    add_drake_matrix_equality_constraint(model, translation, true_position)
+    true_pose = data.pose_variables[robot_idx][pose_idx]
+    true_position = np.asarray(true_pose.true_position)
+
+    if soft_pin:
+        term = translation - true_position
+        model.AddQuadraticCost(100 * (term ** 2).sum(), is_convex=True)
+    else:
+        # model.AddLinearConstraint(translation == true_position)
+        position_const = add_drake_matrix_equality_constraint(
+            model, translation, true_position
+        )
 
     # fix rotation to identity
-    true_rotation = data.pose_variables[robot_idx][0].rotation_matrix
-    add_drake_matrix_equality_constraint(model, rotation, true_rotation)
+    true_rotation = true_pose.rotation_matrix
+    logger.warning(
+        f"Pinning pose {true_pose.name} to position {true_position}, rotation {true_rotation}"
+    )
+    if soft_pin:
+        term = rotation - true_rotation
+        model.AddQuadraticCost(100 * (term ** 2).sum(), is_convex=True)
+    else:
+        add_drake_matrix_equality_constraint(model, rotation, true_rotation)
 
 
-def pin_first_landmark(
+def pin_nth_landmark(
     model: MathematicalProgram,
     landmark_position: np.ndarray,
     data: FactorGraphData,
+    landmark_idx: int = 0,
 ) -> None:
     """
     Pin the first pose of the robot to the origin.
@@ -742,13 +768,59 @@ def pin_first_landmark(
     Args:
         model (MathematicalProgram): The model to pin the pose in
         landmark_position (np.ndarray): The translation variable to pin
-        rotation (np.ndarray): The rotation variable to pin
         data (FactorGraphData): The factor graph data to use to pin the pose
-        robot_idx (int): The robot index to pin the pose of
     """
     # fix landmark_position to true position
-    true_position = np.asarray(data.landmark_variables[0].true_position)
+    true_position = np.asarray(data.landmark_variables[landmark_idx].true_position)
+
+    # use a prior on the landmark
+    term = landmark_position - true_position
+    # cost = model.AddQuadraticCost(100 * (term.T @ term), is_convex=True)
+
     add_drake_matrix_equality_constraint(model, landmark_position, true_position)
+
+
+def constrain_rotations_to_custom(
+    model: MathematicalProgram,
+    rotations: Dict[str, np.ndarray],
+    custom_rotations: Dict[str, np.ndarray],
+) -> None:
+    """[summary]
+
+    Args:
+        model (MathematicalProgram): [description]
+        rotations (Dict[str, np.ndarray]): [description]
+        custom_rotations (Dict[str, np.ndarray]): [description]
+    """
+    logger.warning("Constraining rotations to custom")
+    keys = list(rotations.keys())
+    for pose_key in keys:
+        rot = custom_rotations[pose_key]
+        _check_rotation_matrix(rot)
+        add_drake_matrix_equality_constraint(model, rotations[pose_key], rot)
+
+
+def constrain_rotations(
+    model: MathematicalProgram,
+    rotations: Dict[str, np.ndarray],
+    data: FactorGraphData,
+):
+    """Constrain the rotations to their true values.
+
+    Args:
+        model (MathematicalProgram): The model to constrain the rotations in
+        rotations (Dict[str, np.ndarray]): The rotations to constrain
+        data (FactorGraphData): The factor graph data to use to constrain the
+        rotations
+    """
+    pose_var_dict = data.pose_variables_dict
+    odom_trajectories = data.odometry_trajectories_as_dict
+    dim = data.dimension
+    for pose_key in rotations:
+        true_rotation = pose_var_dict[pose_key].rotation_matrix
+        # true_rotation = odom_trajectories[pose_key][:dim, :dim]
+        # logger.info(f"Constraining rotation {pose_key} to {true_rotation}")
+        add_drake_matrix_equality_constraint(model, rotations[pose_key], true_rotation)
 
 
 def set_orthogonal_constraint(model: MathematicalProgram, mat: np.ndarray) -> None:
@@ -807,7 +879,7 @@ def set_mixed_int_rotation_constraint(
 
 def add_drake_matrix_equality_constraint(
     model: MathematicalProgram, var: np.ndarray, mat: np.ndarray
-) -> None:
+) -> LinearEqualityConstraint:
     """Adds a Drake matrix equality constraint to the model.
 
     Args:
@@ -820,7 +892,7 @@ def add_drake_matrix_equality_constraint(
     var_vec = var.flatten()
     mat_vec = mat.flatten()
     I = np.eye(len(var_vec))
-    model.AddLinearEqualityConstraint(
+    return model.AddLinearEqualityConstraint(
         I,
         mat_vec,
         var_vec,
@@ -841,15 +913,16 @@ def add_drake_distance_equality_constraint(
     """
     assert len(trans) == len(land), "must be same dimension"
     assert len(dist) == 1, "must be a scalar"
+    raise NotImplementedError("Deprecated - do not use")
 
     d = len(trans)
     I_d = np.eye(len(trans))
     q_size = 2 * d + 1
     Q = np.zeros((q_size, q_size))
-    Q[:2, :2] = I_d
-    Q[2:4, 2:4] = I_d
-    Q[:2, 2:4] = -I_d
-    Q[2:4, :2] = -I_d
+    Q[:d, :d] = I_d
+    Q[d : 2 * d, d : 2 * d] = I_d
+    Q[:d, d : 2 * d] = -I_d
+    Q[d : 2 * d, :d] = -I_d
     Q[-1, -1] = -1
 
     quad_constraint = QuadraticConstraint(Q, np.zeros((q_size, 1)), lb=0.0, ub=0.0)

@@ -89,11 +89,6 @@ def solve_mle_qcqp(
 
     # pin first pose based on data
     du.pin_first_pose(model, translations["A0"], rotations["A0"], data, 0)
-    du.pin_first_pose(model, translations["B0"], rotations["B0"], data, 1)
-    du.pin_first_pose(model, translations["C0"], rotations["C0"], data, 2)
-
-    if landmarks:
-        du.pin_first_landmark(model, landmarks["L0"], data)
 
     if solver_params.init_technique == "gt":
         du.set_rotation_init_gt(model, rotations, data)
@@ -115,10 +110,11 @@ def solve_mle_qcqp(
             solver_params.custom_init_file is not None
         ), "Must provide custom_init_filepath if using custom init"
         custom_vals = load_custom_init_file(solver_params.custom_init_file)
-        init_rotations = custom_vals.rotations
+        init_rotations = custom_vals.rotations_matrix
         init_translations = custom_vals.translations
         init_landmarks = custom_vals.landmarks
         du.set_rotation_init_custom(model, rotations, init_rotations)
+        du.constrain_rotations_to_custom(model, rotations, init_rotations)
         du.set_translation_init_custom(model, translations, init_translations)
         du.set_landmark_init_custom(model, landmarks, init_landmarks)
         du.set_distance_init_valid(model, distances, init_translations, init_landmarks)
@@ -133,9 +129,9 @@ def solve_mle_qcqp(
             du.set_drake_solver_verbose(model, solver)
 
         if solver_params.solver == "gurobi":
-            # model.SetSolverOption(solver.solver_id(), "BarQCPConvTol", 1e-8)
-            # model.SetSolverOption(solver.solver_id(), "BarConvTol", 1e-8)
-            # model.SetSolverOption(solver.solver_id(), "BarHomogeneous", 1)
+            model.SetSolverOption(solver.solver_id(), "BarQCPConvTol", 1e-12)
+            model.SetSolverOption(solver.solver_id(), "BarConvTol", 1e-12)
+            model.SetSolverOption(solver.solver_id(), "BarHomogeneous", 1)
 
             # Set to be numerically conservative:
             # https://www.gurobi.com/documentation/9.5/refman/numericfocus.html
@@ -153,7 +149,8 @@ def solve_mle_qcqp(
 
     #! small add on to check the quality of the solution via the matrix
     # determinants
-    check_rotation_determinants = False
+    check_rotation_determinants = True
+    init_file = solver_params.custom_init_file
     if check_rotation_determinants:
         # get list of the determinants of the rotation matrices
         det_list = [
@@ -163,8 +160,13 @@ def solve_mle_qcqp(
 
         import matplotlib.pyplot as plt
 
+        logger.warning(
+            "Plotting the rotation matrix determinants - be sure to close the plot to continue"
+        )
         x_idxs = [i for i in range(len(det_list))]
         plt.plot(x_idxs, det_list)
+        plt.ylim([-0.1, 1.1])
+        plt.title("Determinants of Unrounded Rotation Matrices")
         plt.show(block=True)  # type: ignore
 
     solution_vals = du.get_solved_values(
@@ -184,12 +186,6 @@ def solve_mle_qcqp(
             result.get_optimal_cost(),
             results_filepath,
         )
-
-    # if solver_params.init_technique == "custom":
-    #     plot_error(data, solution_vals, grid_size, custom_vals)
-    # else:
-    #     # do not solve local so only print the relaxed solution
-    #     plot_error(data, solution_vals, grid_size)
 
 
 if __name__ == "__main__":
@@ -234,5 +230,24 @@ if __name__ == "__main__":
     # check that the measurements are all good
     # assert fg.only_good_measurements()
 
-    results_filepath = join(args.results_dir, args.results_filename)
-    solve_mle_qcqp(fg, solver_params, results_filepath)
+    kevin_round = True
+    if kevin_round:
+        # round the measurements
+
+        results_filepath = join(args.results_dir, "intermediate.pickle")
+        solve_mle_qcqp(fg, solver_params, results_filepath)
+
+        second_solve_params = QcqpSolverParams(
+            solver="gurobi",
+            verbose=True,
+            save_results=True,
+            use_socp_relax=True,
+            use_orthogonal_constraint=False,
+            init_technique="custom",
+            custom_init_file=results_filepath,
+        )
+        second_results_filepath = join(args.results_dir, args.results_filename)
+        solve_mle_qcqp(fg, second_solve_params, second_results_filepath)
+    else:
+        results_filepath = join(args.results_dir, args.results_filename)
+        solve_mle_qcqp(fg, solver_params, results_filepath)
