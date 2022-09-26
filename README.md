@@ -43,4 +43,4 @@ to run this on your own data.
 
 ## Paper
 
-Extended version of our ICRA 2023 Submission: [SCORE Extended Version](https://github.com/alanpapalia/score2022extended/blob/master/score2023_extended.pdf)
+Extended version of our ICRA 2023 Submission: [SCORE Extended Version](https://github.com/alanpapalia/score2022extended/blob/master/score2022extended.pdf)
