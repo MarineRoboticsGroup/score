@@ -22,41 +22,38 @@ from py_factor_graph.parsing.parse_efg_file import parse_efg_file
 
 
 import score.utils.drake_utils as du
-from ro_slam.utils.solver_utils import (
+from score.utils.solver_utils import (
     QcqpSolverParams,
     SolverResults,
     save_results_to_file,
     load_custom_init_file,
 )
-from ro_slam.utils.matrix_utils import get_matrix_determinant
+from score.utils.matrix_utils import get_matrix_determinant
 
 
 def solve_mle_qcqp(
     data: FactorGraphData,
     solver_params: QcqpSolverParams,
     results_filepath: str,
-):
+) -> SolverResults:
     """
     Takes the data describing the problem and returns the MLE solution to the
     poses and landmark positions
 
     args:
         data (FactorGraphData): the data describing the problem
-        solver (str): the solver to use [ipopt, snopt, default]
-        verbose (bool): whether to show verbose solver output
-        save_results (bool): whether to save the results to a file
-        results_filepath (str): the path to save the results to
-        use_socp_relax (bool): whether to use socp relaxation on distance
-            variables
-        use_orthogonal_constraint (bool): whether to use orthogonal
-            constraint on rotation variables
+        solver_params (QcqpSolverParams): the parameters for the solver
+        results_filepath (str): where to save the results
+
+    returns:
+        SolverResults: the results of the solver
     """
     solver_options = ["mosek", "gurobi", "ipopt", "snopt", "default"]
     assert (
         solver_params.solver in solver_options
     ), f"Invalid solver, must be from: {solver_options}"
 
-    init_options = ["gt", "compose", "random", "none", "custom"]
+    init_options = ["gt", "compose", "random", "none", "custom", "double_solve_custom"]
     assert (
         solver_params.init_technique in init_options
     ), f"Invalid init_technique, must be from: {init_options}"
@@ -114,6 +111,18 @@ def solve_mle_qcqp(
         init_translations = custom_vals.translations
         init_landmarks = custom_vals.landmarks
         du.set_rotation_init_custom(model, rotations, init_rotations)
+        du.set_translation_init_custom(model, translations, init_translations)
+        du.set_landmark_init_custom(model, landmarks, init_landmarks)
+        du.set_distance_init_valid(model, distances, init_translations, init_landmarks)
+    elif solver_params.init_technique == "double_solve_custom":
+        assert (
+            solver_params.custom_init_file is not None
+        ), "Must provide custom_init_filepath if using custom init"
+        custom_vals = load_custom_init_file(solver_params.custom_init_file)
+        init_rotations = custom_vals.rotations_matrix
+        init_translations = custom_vals.translations
+        init_landmarks = custom_vals.landmarks
+        du.set_rotation_init_custom(model, rotations, init_rotations)
         du.constrain_rotations_to_custom(model, rotations, init_rotations)
         du.set_translation_init_custom(model, translations, init_translations)
         du.set_landmark_init_custom(model, landmarks, init_landmarks)
@@ -141,7 +150,7 @@ def solve_mle_qcqp(
         result = solver.Solve(model)
     except Exception as e:
         print("Error: ", e)
-        return
+        raise e
     t_end = time.time()
     tot_time = t_end - t_start
     print(f"Solved in {tot_time} seconds")
@@ -149,8 +158,7 @@ def solve_mle_qcqp(
 
     #! small add on to check the quality of the solution via the matrix
     # determinants
-    check_rotation_determinants = True
-    init_file = solver_params.custom_init_file
+    check_rotation_determinants = False
     if check_rotation_determinants:
         # get list of the determinants of the rotation matrices
         det_list = [
@@ -186,6 +194,8 @@ def solve_mle_qcqp(
             result.get_optimal_cost(),
             results_filepath,
         )
+
+    return solution_vals
 
 
 if __name__ == "__main__":
@@ -227,12 +237,10 @@ if __name__ == "__main__":
     logger.info(f"Loaded data: {fg_filepath}")
     fg.print_summary()
 
-    # check that the measurements are all good
-    # assert fg.only_good_measurements()
-
-    kevin_round = True
-    if kevin_round:
+    double_solve = False
+    if double_solve:
         # round the measurements
+        logger.warning("Using the double solve approach to rounding")
 
         results_filepath = join(args.results_dir, "intermediate.pickle")
         solve_mle_qcqp(fg, solver_params, results_filepath)
@@ -243,11 +251,12 @@ if __name__ == "__main__":
             save_results=True,
             use_socp_relax=True,
             use_orthogonal_constraint=False,
-            init_technique="custom",
+            init_technique="double_solve_custom",
             custom_init_file=results_filepath,
         )
         second_results_filepath = join(args.results_dir, args.results_filename)
         solve_mle_qcqp(fg, second_solve_params, second_results_filepath)
     else:
+        logger.warning("Using the single solve approach to rounding")
         results_filepath = join(args.results_dir, args.results_filename)
         solve_mle_qcqp(fg, solver_params, results_filepath)

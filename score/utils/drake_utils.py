@@ -3,7 +3,7 @@ from typing import List, Tuple, Union, Dict
 import tqdm  # type: ignore
 
 from py_factor_graph.factor_graph import FactorGraphData
-from ro_slam.utils.matrix_utils import (
+from score.utils.matrix_utils import (
     _check_square,
     _check_rotation_matrix,
     get_random_vector,
@@ -12,7 +12,7 @@ from ro_slam.utils.matrix_utils import (
     round_to_special_orthogonal,
     make_transformation_matrix,
 )
-from ro_slam.utils.solver_utils import SolverResults, VariableValues
+from score.utils.solver_utils import SolverResults, VariableValues
 
 from pydrake.solvers.mathematicalprogram import MathematicalProgram, QuadraticConstraint, LinearEqualityConstraint  # type: ignore
 from pydrake.solvers.mathematicalprogram import MathematicalProgramResult as DrakeResult  # type: ignore
@@ -793,6 +793,11 @@ def constrain_rotations_to_custom(
         custom_rotations (Dict[str, np.ndarray]): [description]
     """
     logger.warning("Constraining rotations to custom")
+    logger.warning(
+        "Currently constraining rotations to perform second solve"
+        " - rotations should just be treated as constants, not "
+        "variables in this case"
+    )
     keys = list(rotations.keys())
     for pose_key in keys:
         rot = custom_rotations[pose_key]
@@ -978,12 +983,14 @@ def get_solved_values(
         key: result.GetSolution(distances[key]) for key in distances.keys()
     }
 
+    var_vals = VariableValues(
+        poses=solved_poses,
+        landmarks=solved_landmarks,
+        distances=solved_distances,
+    )
+
     return SolverResults(
-        VariableValues(
-            poses=solved_poses,
-            landmarks=solved_landmarks,
-            distances=solved_distances,
-        ),
+        variables=var_vals,
         total_time=time,
         solved=result.is_success(),
         pose_chain_names=pose_chain_names,
