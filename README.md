@@ -1,6 +1,50 @@
 # SCORE: Second Order Conic Initialization for RA-SLAM
 
-Code to solve a second-order cone program as a convex relaxation of the range-aided SLAM problem
+
+Code to solve a second-order cone program to initialize a local-search solver
+for the range-aided SLAM problem. The SOCP is a convex relaxation of the
+original problem.
+
+Check out the extended version of our [paper]()
+
+
+<img src="media/title_figure.png" width="700"/>
+
+
+## Results
+
+We show the key results from our paper, comparing SCORE to a range of other initialization strategies.
+
+### Real-World AUV Experiments
+
+<img src="media/GoatsTrajs_3col_linewidth2.png" width="750"/>
+
+- SCORE: our method, using a second-order cone program for initialization
+- Odom: initializing with robot odometry
+
+### Simulated Single-Robot Experiments
+
+<img src="media/MultiTrajsV4.png" width="850"/>
+
+- SCORE: our method, using a second-order cone program for initialization
+- SCORE Init: the estimate returned by SCORE (before refining via local-search)
+- Odom-R: initializing with robot odometry, randomizing the first pose of each robot
+- Odom-P: initializing with robot odometry, initializing with the true first pose for each robot
+- GT-Init: initializing with the ground-truth values (when available)
+
+
+### Simulated Single-Robot Experiments
+
+<img src="media/SingleTrajsV5.png" width="750"/>
+
+- SCORE: our method, using a second-order cone program for initialization
+- Odom: initializing with robot odometry
+- GT-Init: initializing with the ground-truth values (when available)
+
+## Usage
+
+Feel free to look inside our `/examples` directory. You can also directly call `python3 score/solve_score.py` 
+to run this on your own data.
 
 ## Dependencies
 
@@ -35,12 +79,3 @@ We use [evo](https://github.com/MichaelGrupp/evo) to perform visualization of ou
 
 We used GTSAM to refine our initial estimates provided by SCORE. We recommend 
 installing via `pip install gtsam==4.1.0`.
-
-## Usage
-
-Feel free to look inside our `/examples` directory. You can also directly call `python3 score/solve_score.py` 
-to run this on your own data.
-
-## Paper
-
-Extended version of our ICRA 2023 Submission: [SCORE Extended Version](https://github.com/alanpapalia/score2022extended/blob/master/score2022extended.pdf)
