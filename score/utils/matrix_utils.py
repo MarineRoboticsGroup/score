@@ -68,11 +68,14 @@ def round_to_special_orthogonal(mat: np.ndarray) -> np.ndarray:
     """
     _check_square(mat)
     dim = mat.shape[0]
-    S, D, Vh = la.svd(mat)
-    R_so = S @ Vh
-    if np.linalg.det(R_so) < 0:
-        R_so = S @ np.diag([1] * (dim - 1) + [-1]) @ Vh
-    _check_rotation_matrix(R_so, assert_test=True)
+    try:
+        S, D, Vh = la.svd(mat)
+        R_so = S @ Vh
+        if np.linalg.det(R_so) < 0:
+            R_so = S @ np.diag([1] * (dim - 1) + [-1]) @ Vh
+        _check_rotation_matrix(R_so, assert_test=True)
+    except ValueError:
+        raise ValueError(f"Could not round matrix to special orthogonal form: {mat}")
     return R_so
 
 

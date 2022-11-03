@@ -28,6 +28,7 @@ class QcqpSolverParams:
     use_orthogonal_constraint: bool = attr.ib()
     init_technique: str = attr.ib()
     custom_init_file: Optional[str] = attr.ib(default=None)
+    iterations: Optional[int] = attr.ib(default=None)
 
 
 def _check_poses(self, attribute, value: Dict[str, np.ndarray]):
