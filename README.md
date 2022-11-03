@@ -5,7 +5,7 @@ Code to solve a second-order cone program to initialize a local-search solver
 for the range-aided SLAM problem. The SOCP is a convex relaxation of the
 original problem.
 
-Check out the extended version of our [paper]()
+Check out the extended version of our [paper](https://arxiv.org/abs/2210.03177)
 
 
 <img src="media/title_figure.png" width="700"/>
