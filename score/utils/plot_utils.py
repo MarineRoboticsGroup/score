@@ -7,13 +7,13 @@ import matplotlib.lines as mlines
 from matplotlib.colors import to_rgba
 from py_factor_graph.factor_graph import FactorGraphData
 from py_factor_graph.variables import PoseVariable, LandmarkVariable
-from score.utils.circle_utils import Arc, Circle, CircleIntersection, Point
-from score.utils.solver_utils import SolverResults, VariableValues
-from score.utils.matrix_utils import (
+from py_factor_graph.utils.solver_utils import SolverResults, VariableValues
+from py_factor_graph.utils.matrix_utils import (
     _check_transformation_matrix,
     get_theta_from_rotation_matrix,
     get_translation_from_transformation_matrix,
 )
+from score.utils.circle_utils import Arc, Circle, CircleIntersection, Point
 
 colors = ["red", "green", "blue", "orange", "purple", "black", "cyan"]
 

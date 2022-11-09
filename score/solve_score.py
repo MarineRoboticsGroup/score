@@ -19,29 +19,21 @@ from pydrake.solvers.mathematicalprogram import MathematicalProgram  # type: ign
 from py_factor_graph.factor_graph import FactorGraphData
 from py_factor_graph.parsing.parse_pickle_file import parse_pickle_file
 from py_factor_graph.parsing.parse_efg_file import parse_efg_file
+from py_factor_graph.utils.solver_utils import (
+    SolverResults,
+    save_results_to_file,
+    load_custom_init_file,
+)
+from py_factor_graph.utils.matrix_utils import get_matrix_determinant
 
 
 import score.utils.drake_utils as du
 from score.utils.solver_utils import (
     QcqpSolverParams,
-    SolverResults,
-    save_results_to_file,
-    load_custom_init_file,
 )
-from score.utils.matrix_utils import get_matrix_determinant
 
 
 def _check_solver_params(solver_params: QcqpSolverParams):
-    solver_options = ["mosek", "gurobi", "ipopt", "snopt", "default"]
-    assert (
-        solver_params.solver in solver_options
-    ), f"Invalid solver, must be from: {solver_options}"
-
-    init_options = ["gt", "compose", "random", "none", "custom", "double_solve_custom"]
-    assert (
-        solver_params.init_technique in init_options
-    ), f"Invalid init_technique, must be from: {init_options}"
-
     if solver_params.solver in ["mosek", "gurobi"]:
         assert (
             solver_params.use_socp_relax and not solver_params.use_orthogonal_constraint
@@ -107,7 +99,7 @@ def _initialize_variables(
         du.set_distance_init_valid(model, distances, init_translations, init_landmarks)
 
 
-def _solve_problem(model, solver_params):
+def _solve_problem(model, solver_params: QcqpSolverParams):
     print("Starting solver...")
 
     t_start = time.time()
@@ -205,6 +197,8 @@ def solve_mle_qcqp(
     du.add_distances_cost(model, distances, data)
     du.add_odom_cost(model, translations, rotations, data)
     du.add_loop_closure_cost(model, translations, rotations, data)
+    du.add_pose_prior_cost(model, translations, rotations, data)
+    du.add_landmark_prior_cost(model, landmarks, data)
 
     # pin first pose based on data
     du.pin_first_pose(model, translations["A0"], rotations["A0"], data, 0)

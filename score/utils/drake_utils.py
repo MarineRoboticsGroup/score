@@ -3,7 +3,8 @@ from typing import List, Tuple, Union, Dict
 import tqdm  # type: ignore
 
 from py_factor_graph.factor_graph import FactorGraphData
-from score.utils.matrix_utils import (
+from py_factor_graph.utils.solver_utils import SolverResults, VariableValues
+from py_factor_graph.utils.matrix_utils import (
     _check_square,
     _check_rotation_matrix,
     get_random_vector,
@@ -12,7 +13,6 @@ from score.utils.matrix_utils import (
     round_to_special_orthogonal,
     make_transformation_matrix,
 )
-from score.utils.solver_utils import SolverResults, VariableValues
 
 from pydrake.solvers.mathematicalprogram import MathematicalProgram, QuadraticConstraint, LinearEqualityConstraint  # type: ignore
 from pydrake.solvers.mathematicalprogram import MathematicalProgramResult as DrakeResult  # type: ignore
@@ -352,6 +352,50 @@ def add_loop_closure_cost(
         diff_rot_matrix = R_j - (R_i @ rot_measure)
         model.AddQuadraticCost(
             rot_weight * (diff_rot_matrix ** 2).sum(), is_convex=True
+        )
+
+
+def add_pose_prior_cost(
+    model: MathematicalProgram,
+    translations: Dict[str, np.ndarray],
+    rotations: Dict[str, np.ndarray],
+    data: FactorGraphData,
+):
+    for pose_prior in data.pose_priors:
+
+        # translation component of cost
+        # k_ij * ||t_i - t_ij||^2
+        t_i = translations[pose_prior.name]
+        translation_precision = pose_prior.translation_precision
+        translation_term = t_i - pose_prior.translation_vector
+        model.AddQuadraticCost(
+            translation_precision * (translation_term ** 2).sum(), is_convex=True
+        )
+
+        # rotation component of cost
+        # tau_ij * || R_i - R_prior ||_\frob^2
+        R_i = rotations[pose_prior.name]
+        rotation_precision = pose_prior.rotation_precision
+        rot_term = R_i - pose_prior.rotation_matrix
+        model.AddQuadraticCost(
+            rotation_precision * (rot_term ** 2).sum(), is_convex=True
+        )
+
+
+def add_landmark_prior_cost(
+    model: MathematicalProgram,
+    landmarks: Dict[str, np.ndarray],
+    data: FactorGraphData,
+):
+    for landmark_prior in data.landmark_priors:
+
+        # translation component of cost
+        # k_ij * ||t_i - t_ij||^2
+        t_i = landmarks[landmark_prior.name]
+        translation_precision = landmark_prior.translation_precision
+        translation_term = t_i - landmark_prior.translation_vector
+        model.AddQuadraticCost(
+            translation_precision * (translation_term ** 2).sum(), is_convex=True
         )
 
 
