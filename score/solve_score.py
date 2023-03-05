@@ -109,21 +109,20 @@ def _solve_problem(model, solver_params: QcqpSolverParams):
             du.set_drake_solver_verbose(model, solver)
 
         if solver_params.solver == "gurobi":
-            model.SetSolverOption(solver.solver_id(), "BarQCPConvTol", 1e-12)
-            model.SetSolverOption(solver.solver_id(), "BarConvTol", 1e-12)
+            # model.SetSolverOption(solver.solver_id(), "BarQCPConvTol", 1e-12)
+            # model.SetSolverOption(solver.solver_id(), "BarConvTol", 1e-12)
             model.SetSolverOption(solver.solver_id(), "BarHomogeneous", 1)
 
             # set max number of iterations
             if solver_params.iterations is not None:
-                pass
                 model.SetSolverOption(
                     solver.solver_id(), "BarIterLimit", solver_params.iterations
                 )
 
             # Set to be numerically conservative:
             # https://www.gurobi.com/documentation/9.5/refman/numericfocus.html
-            model.SetSolverOption(solver.solver_id(), "NumericFocus", 3)
-            pass
+            # model.SetSolverOption(solver.solver_id(), "NumericFocus", 3)
+            # pass
 
         result = solver.Solve(model)
     except Exception as e:
@@ -176,6 +175,7 @@ def solve_mle_qcqp(
 
     _check_solver_params(solver_params)
     _check_factor_graph(data)
+    logger.debug(f"Running SCORE solver with params: {solver_params}")
 
     model = MathematicalProgram()
 
@@ -210,13 +210,14 @@ def solve_mle_qcqp(
     # _check_solution_quality(result, rotations)
 
     solution_vals = du.get_solved_values(
-        result,
-        tot_time,
-        translations,
-        rotations,
-        landmarks,
-        distances,
-        data.get_pose_chain_names(),
+        result=result,
+        dim=data.dimension,
+        time=tot_time,
+        translations=translations,
+        rotations=rotations,
+        landmarks=landmarks,
+        distances=distances,
+        pose_chain_names=data.get_pose_chain_names(),
     )
 
     if solver_params.save_results:

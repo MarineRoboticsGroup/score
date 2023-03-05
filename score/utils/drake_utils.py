@@ -986,6 +986,7 @@ def add_drake_distance_equality_constraint(
 
 def get_solved_values(
     result: DrakeResult,
+    dim: int,
     time: float,
     translations: Dict[str, np.ndarray],
     rotations: Dict[str, np.ndarray],
@@ -1028,6 +1029,7 @@ def get_solved_values(
     }
 
     var_vals = VariableValues(
+        dim=dim,
         poses=solved_poses,
         landmarks=solved_landmarks,
         distances=solved_distances,
