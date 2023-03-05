@@ -29,16 +29,8 @@ from py_factor_graph.utils.matrix_utils import get_matrix_determinant
 
 import score.utils.drake_utils as du
 from score.utils.solver_utils import (
-    QcqpSolverParams,
+    ScoreSolverParams,
 )
-
-
-def _check_solver_params(solver_params: QcqpSolverParams):
-    if solver_params.solver in ["mosek", "gurobi"]:
-        assert (
-            solver_params.use_socp_relax and not solver_params.use_orthogonal_constraint
-        ), "Mosek and Gurobi solver only used to solve convex problems"
-
 
 def _check_factor_graph(data: FactorGraphData):
     unconnected_variables = data.unconnected_variable_names
@@ -50,7 +42,7 @@ def _check_factor_graph(data: FactorGraphData):
 def _initialize_variables(
     model,
     data: FactorGraphData,
-    solver_params: QcqpSolverParams,
+    solver_params: ScoreSolverParams,
     rotations,
     translations,
     distances,
@@ -99,7 +91,7 @@ def _initialize_variables(
         du.set_distance_init_valid(model, distances, init_translations, init_landmarks)
 
 
-def _solve_problem(model, solver_params: QcqpSolverParams):
+def _solve_problem(model, solver_params: ScoreSolverParams):
     print("Starting solver...")
 
     t_start = time.time()
@@ -155,9 +147,9 @@ def _check_solution_quality(result, rotations):
     plt.show(block=True)  # type: ignore
 
 
-def solve_mle_qcqp(
+def solve_score(
     data: FactorGraphData,
-    solver_params: QcqpSolverParams,
+    solver_params: ScoreSolverParams,
     results_filepath: str,
 ) -> SolverResults:
     """
@@ -166,14 +158,13 @@ def solve_mle_qcqp(
 
     args:
         data (FactorGraphData): the data describing the problem
-        solver_params (QcqpSolverParams): the parameters for the solver
+        solver_params (ScoreSolverParams): the parameters for the solver
         results_filepath (str): where to save the results
 
     returns:
         SolverResults: the results of the solver
     """
 
-    _check_solver_params(solver_params)
     _check_factor_graph(data)
     logger.debug(f"Running SCORE solver with params: {solver_params}")
 
@@ -181,11 +172,11 @@ def solve_mle_qcqp(
 
     # Add variables
     translations, rotations = du.add_pose_variables(
-        model, data, solver_params.use_orthogonal_constraint
+        model, data
     )
     landmarks = du.add_landmark_variables(model, data)
     distances = du.add_distance_variables(
-        model, data, translations, landmarks, solver_params.use_socp_relax
+        model, data, translations, landmarks
     )
 
     # initialize the variables based on the solver params
@@ -232,12 +223,10 @@ def solve_mle_qcqp(
 
 
 if __name__ == "__main__":
-    solver_params = QcqpSolverParams(
+    solver_params = ScoreSolverParams(
         solver="gurobi",
         verbose=True,
         save_results=True,
-        use_socp_relax=True,
-        use_orthogonal_constraint=False,
         init_technique="gt",
         custom_init_file=None,
     )
@@ -276,20 +265,18 @@ if __name__ == "__main__":
         logger.warning("Using the double solve approach to rounding")
 
         results_filepath = join(args.results_dir, "intermediate.pickle")
-        solve_mle_qcqp(fg, solver_params, results_filepath)
+        solve_score(fg, solver_params, results_filepath)
 
-        second_solve_params = QcqpSolverParams(
+        second_solve_params = ScoreSolverParams(
             solver="gurobi",
             verbose=True,
             save_results=True,
-            use_socp_relax=True,
-            use_orthogonal_constraint=False,
             init_technique="double_solve_custom",
             custom_init_file=results_filepath,
         )
         second_results_filepath = join(args.results_dir, args.results_filename)
-        solve_mle_qcqp(fg, second_solve_params, second_results_filepath)
+        solve_score(fg, second_solve_params, second_results_filepath)
     else:
         logger.warning("Using the single solve approach to rounding")
         results_filepath = join(args.results_dir, args.results_filename)
-        solve_mle_qcqp(fg, solver_params, results_filepath)
+        solve_score(fg, solver_params, results_filepath)

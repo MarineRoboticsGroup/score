@@ -12,13 +12,11 @@ from py_factor_graph.utils.matrix_utils import (
 
 
 @attr.s(frozen=True)
-class QcqpSolverParams:
+class ScoreSolverParams:
     solver: str = attr.ib()
     verbose: bool = attr.ib()
     save_results: bool = attr.ib()
     init_technique: str = attr.ib(default="random")
-    use_socp_relax: bool = attr.ib(default=True)
-    use_orthogonal_constraint: bool = attr.ib(default=False)
     custom_init_file: Optional[str] = attr.ib(default=None)
     iterations: Optional[int] = attr.ib(default=None)
 

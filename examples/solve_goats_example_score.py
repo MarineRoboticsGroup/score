@@ -18,19 +18,17 @@ coloredlogs.install(
 )
 
 from py_factor_graph.parsing.parse_pickle_file import parse_pickle_file
-from score.solve_score import solve_mle_qcqp
-from score.utils.solver_utils import QcqpSolverParams
+from score.solve_score import solve_score
+from score.utils.solver_utils import ScoreSolverParams
 
 
 if __name__ == "__main__":
 
     # Set up the solver
-    solver_params = QcqpSolverParams(
+    solver_params = ScoreSolverParams(
         solver="gurobi",
         verbose=True,
         save_results=True,
-        use_socp_relax=True,
-        use_orthogonal_constraint=False,
         init_technique="none",
         custom_init_file=None,
     )
@@ -43,31 +41,29 @@ if __name__ == "__main__":
 
     results_filepath = goats_file_path.replace(".pkl", "_results.tum")
 
-    # * We have a fancy double-solve approach that fixes the rotations solved for
-    #  the first time and resolves the problem. Right now it's not perfectly
-    #  fleshed out but it works really well in practice and has some theoretical
-    #  similarities to the chordal initialization approach. Flip this flag to
-    #  test it out
+    # * We have a fancy double-solve approach that fixes the rotations solved
+    # for the first time and resolves the problem. Right now it's not perfectly
+    # fleshed out but it works really well in practice and has some theoretical
+    # similarities to the chordal initialization approach. Flip this flag to
+    # test it out
     double_solve = False
     if double_solve:
         intermediate_results_filepath = goats_file_path.replace(
             ".pkl", "_intermediate.pkl"
         )
-        solve_mle_qcqp(goats_pyfg, solver_params, intermediate_results_filepath)
+        solve_score(goats_pyfg, solver_params, intermediate_results_filepath)
 
-        second_solve_params = QcqpSolverParams(
+        second_solve_params = ScoreSolverParams(
             solver="gurobi",
             verbose=True,
             save_results=True,
-            use_socp_relax=True,
-            use_orthogonal_constraint=False,
             init_technique="double_solve_custom",
             custom_init_file=intermediate_results_filepath,
         )
-        solve_mle_qcqp(goats_pyfg, second_solve_params, results_filepath)
+        solve_score(goats_pyfg, second_solve_params, results_filepath)
     else:
         # Solve the problem and save the results to a TUM file for visualization
-        solve_mle_qcqp(goats_pyfg, solver_params, results_filepath)
+        solve_score(goats_pyfg, solver_params, results_filepath)
 
     # have to do this because of the way we have our save functionality set up
     # for multi-robot scenarios (we enumerate robot trajectories with letters)
