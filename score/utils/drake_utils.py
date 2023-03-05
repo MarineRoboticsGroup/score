@@ -20,15 +20,11 @@ from pydrake.solvers.ipopt import IpoptSolver  # type: ignore
 from pydrake.solvers.snopt import SnoptSolver  # type: ignore
 from pydrake.solvers.gurobi import GurobiSolver  # type: ignore
 from pydrake.solvers.mosek import MosekSolver  # type: ignore
-from pydrake.solvers.mixed_integer_rotation_constraint import (  # type: ignore
-    MixedIntegerRotationConstraintGenerator as MIRCGenerator,
-)
 
 import logging
 
 logger = logging.getLogger(__name__)
 
-# from pydrake.solvers.mixed_integer_optimization_util import IntervalBinning  # type: ignore
 
 ##### Add variables #####
 
