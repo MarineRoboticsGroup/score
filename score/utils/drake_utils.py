@@ -20,21 +20,17 @@ from pydrake.solvers.ipopt import IpoptSolver  # type: ignore
 from pydrake.solvers.snopt import SnoptSolver  # type: ignore
 from pydrake.solvers.gurobi import GurobiSolver  # type: ignore
 from pydrake.solvers.mosek import MosekSolver  # type: ignore
-from pydrake.solvers.mixed_integer_rotation_constraint import (  # type: ignore
-    MixedIntegerRotationConstraintGenerator as MIRCGenerator,
-)
 
 import logging
 
 logger = logging.getLogger(__name__)
 
-# from pydrake.solvers.mixed_integer_optimization_util import IntervalBinning  # type: ignore
 
 ##### Add variables #####
 
 
 def add_pose_variables(
-    model: MathematicalProgram, data: FactorGraphData, orthogonal_constraint: bool
+    model: MathematicalProgram, data: FactorGraphData
 ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
     """
     Adds variables to the model that represent the pose of the robot.
@@ -43,7 +39,6 @@ def add_pose_variables(
     Args:
         model (MathematicalProgram): The model to add the variables to.
         pose_variables (List[PoseVariable]): The list of pose variables to add.
-        orthogonal_constraint (bool): Whether to add orthogonal constraints to the rotation matrices (i.e. R.T @ R = I)
 
     Returns:
         Dict[str, np.ndarray]: The variables representing the translations of the robot keyed by the variable name.
@@ -67,11 +62,6 @@ def add_pose_variables(
             rot_name = f"{pose_name}_rotation"
             rot_var = add_rotation_var(model, rot_name, data.dimension)
             rotations[pose_name] = rot_var
-
-            # TODO test out more efficient constraints?
-            # add in rotation constraint (i.e. matrix must be in orthogonal group)
-            if orthogonal_constraint:
-                set_orthogonal_constraint(model, rot_var)
 
     logger.info("Done adding pose variables")
     assert (translations.keys()) == (rotations.keys())
@@ -113,7 +103,6 @@ def add_distance_variables(
     data: FactorGraphData,
     translations: Dict[str, np.ndarray],
     landmarks: Dict[str, np.ndarray],
-    socp_relax: bool,
 ) -> Dict[Tuple[str, str], np.ndarray]:
     """
     Adds variables to the model that represent the distances between the robot's
@@ -124,7 +113,6 @@ def add_distance_variables(
         data (FactorGraphData): The factor graph data.
         translations (Dict[str, np.ndarray]): The variables representing the translations of the robot
         rotations (Dict[str, np.ndarray]): The variables representing the rotations of the robot
-        socp_relax (bool): Whether to relax the distance constraint to SOCP
 
     Returns:
         Dict[Tuple[str, str], np.ndarray]: The dict of variables representing
@@ -162,14 +150,9 @@ def add_distance_variables(
         diff = trans_i - trans_j
 
         # give two options for how to implement the distance constraint
-        if socp_relax:
-            cone_vars = np.asarray([distances[dist_key][0], *diff.flatten()])
-            cone_const = model.AddLorentzConeConstraint(cone_vars)
-        else:
-            # nonconvex quadratic constraint
-            add_drake_distance_equality_constraint(
-                model, trans_i, trans_j, distances[dist_key]
-            )
+        cone_vars = np.asarray([distances[dist_key][0], *diff.flatten()])
+        cone_const = model.AddLorentzConeConstraint(cone_vars)
+
     logger.info("Done adding distance variables")
     return distances
 
@@ -872,60 +855,6 @@ def constrain_rotations(
         add_drake_matrix_equality_constraint(model, rotations[pose_key], true_rotation)
 
 
-def set_orthogonal_constraint(model: MathematicalProgram, mat: np.ndarray) -> None:
-    """Sets an orthogonal constraint on a given matrix (i.e. R.T @ R == I)
-
-    Args:
-        model (MathematicalProgram): the model to set the constraint in
-        mat (np.ndarray): the matrix to constrain
-    """
-    assert mat.shape[0] == mat.shape[1], "matrix must be square"
-    assert mat.shape[0] == 2, "only support 2d matrices right now"
-    d = mat.shape[0]
-    logger.warning(f"Setting orthogonal constraint on matrix of size {d}")
-
-    for i in range(d):
-        for j in range(i, d):
-            col_i = mat[:, i]
-            if i == j:
-                # set diagonal constraint
-                const = model.AddConstraint(col_i[0] ** 2 + col_i[1] ** 2 == 1)
-            else:
-                # set off-diagonal constraint
-                col_j = mat[:, j]
-                const = model.AddConstraint(
-                    col_i[0] * col_j[0] + col_i[1] * col_j[1] == 0
-                )
-
-
-def set_mixed_int_rotation_constraint(
-    model: MathematicalProgram, vars: List[np.ndarray]
-):
-    """Uses built-in Drake constraints to write the rotation matrix as
-    mixed-integer constraints
-
-    Args:
-        model (MathematicalProgram): the model to set the constraints in
-        vars (List[np.ndarray]): the variables to constrain to rotation matrices
-    """
-    # * various constraints for rotation matrices
-    approach = MIRCGenerator.Approach.kBoxSphereIntersection
-    # approach = MIRCGenerator.Approach.kBilinearMcCormick
-    # approach = MIRCGenerator.Approach.kBoth
-
-    intervals_per_half_axis = 10
-
-    # binning = MIRCGenerator.Binning.kLinear
-    binning = MIRCGenerator.Binning.kLogarithmic
-
-    rot_const_generator = MIRCGenerator(approach, intervals_per_half_axis, binning)
-
-    for mat in vars:
-        # this is one type of constraint that Drake allows, but is a
-        # mixed-integer linear constraint so may be more efficient approaches
-        rot_const_generator.AddToProgram(mat, model)
-
-
 def add_drake_matrix_equality_constraint(
     model: MathematicalProgram, var: np.ndarray, mat: np.ndarray
 ) -> LinearEqualityConstraint:
@@ -986,6 +915,7 @@ def add_drake_distance_equality_constraint(
 
 def get_solved_values(
     result: DrakeResult,
+    dim: int,
     time: float,
     translations: Dict[str, np.ndarray],
     rotations: Dict[str, np.ndarray],
@@ -1028,6 +958,7 @@ def get_solved_values(
     }
 
     var_vals = VariableValues(
+        dim=dim,
         poses=solved_poses,
         landmarks=solved_landmarks,
         distances=solved_distances,
