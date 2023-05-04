@@ -234,7 +234,7 @@ def add_distances_cost(
         # k_ij * ||d_ij - d_ij^meas||^2
         dist_diff = distances[dist_key] - range_measure.dist
 
-        model.AddQuadraticCost(range_measure.weight * (dist_diff ** 2).sum())
+        model.AddQuadraticCost(range_measure.weight * (dist_diff**2).sum())
 
 
 def add_odom_cost(
@@ -272,19 +272,19 @@ def add_odom_cost(
             R_j = rotations[j_key]
 
             # translation component of cost
-            # k_ij * ||t_i - t_j - R_i @ t_ij^meas||^2
+            # k_ij * ||t_i - t_j - R_i @ t_{ij}^{meas}||^2
             trans_weight = odom_measure.translation_precision
             trans_measure = odom_measure.translation_vector
             term = t_j - t_i - (R_i @ trans_measure)
-            model.AddQuadraticCost(trans_weight * (term ** 2).sum(), is_convex=True)
+            model.AddQuadraticCost(trans_weight * (term**2).sum(), is_convex=True)
 
             # rotation component of cost
-            # tau_ij * || R_j - (R_i @ R_ij^\top) ||_\frob
+            # tau_ij * || R_j - (R_i @ R_{ij}^{meas}) ||_\frob
             rot_weight = odom_measure.rotation_precision
             rot_measure = odom_measure.rotation_matrix
             diff_rot_matrix = R_j - (R_i @ rot_measure)
             model.AddQuadraticCost(
-                rot_weight * (diff_rot_matrix ** 2).sum(), is_convex=True
+                rot_weight * (diff_rot_matrix**2).sum(), is_convex=True
             )
 
 
@@ -326,7 +326,7 @@ def add_loop_closure_cost(
         trans_weight = loop_measure.translation_precision
         trans_measure = loop_measure.translation_vector
         term = t_j - t_i - (R_i @ trans_measure)
-        model.AddQuadraticCost(trans_weight * (term ** 2).sum(), is_convex=True)
+        model.AddQuadraticCost(trans_weight * (term**2).sum(), is_convex=True)
 
         # rotation component of cost
         # tau_ij * || R_j - (R_i @ R_ij^\top) ||_\frob
@@ -334,7 +334,7 @@ def add_loop_closure_cost(
         rot_measure = loop_measure.rotation_matrix
         diff_rot_matrix = R_j - (R_i @ rot_measure)
         model.AddQuadraticCost(
-            rot_weight * (diff_rot_matrix ** 2).sum(), is_convex=True
+            rot_weight * (diff_rot_matrix**2).sum(), is_convex=True
         )
 
 
@@ -352,7 +352,7 @@ def add_pose_prior_cost(
         translation_precision = pose_prior.translation_precision
         translation_term = t_i - pose_prior.translation_vector
         model.AddQuadraticCost(
-            translation_precision * (translation_term ** 2).sum(), is_convex=True
+            translation_precision * (translation_term**2).sum(), is_convex=True
         )
 
         # rotation component of cost
@@ -361,7 +361,7 @@ def add_pose_prior_cost(
         rotation_precision = pose_prior.rotation_precision
         rot_term = R_i - pose_prior.rotation_matrix
         model.AddQuadraticCost(
-            rotation_precision * (rot_term ** 2).sum(), is_convex=True
+            rotation_precision * (rot_term**2).sum(), is_convex=True
         )
 
 
@@ -378,7 +378,7 @@ def add_landmark_prior_cost(
         translation_precision = landmark_prior.translation_precision
         translation_term = t_i - landmark_prior.translation_vector
         model.AddQuadraticCost(
-            translation_precision * (translation_term ** 2).sum(), is_convex=True
+            translation_precision * (translation_term**2).sum(), is_convex=True
         )
 
 
@@ -718,7 +718,7 @@ def set_distance_init_valid(
 
         dx = pose_trans[0] - landmark[0]
         dy = pose_trans[1] - landmark[1]
-        dist = np.asarray([(dx ** 2 + dy ** 2) ** (1 / 2)])
+        dist = np.asarray([(dx**2 + dy**2) ** (1 / 2)])
         model.SetInitialGuess(distances[dist_key], dist)
 
 
@@ -764,7 +764,7 @@ def pin_nth_pose(
 
     if soft_pin:
         term = translation - true_position
-        model.AddQuadraticCost(100 * (term ** 2).sum(), is_convex=True)
+        model.AddQuadraticCost(100 * (term**2).sum(), is_convex=True)
     else:
         # model.AddLinearConstraint(translation == true_position)
         position_const = add_drake_matrix_equality_constraint(
@@ -778,7 +778,7 @@ def pin_nth_pose(
     )
     if soft_pin:
         term = rotation - true_rotation
-        model.AddQuadraticCost(100 * (term ** 2).sum(), is_convex=True)
+        model.AddQuadraticCost(100 * (term**2).sum(), is_convex=True)
     else:
         add_drake_matrix_equality_constraint(model, rotation, true_rotation)
 
