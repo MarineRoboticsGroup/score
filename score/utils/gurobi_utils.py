@@ -208,6 +208,7 @@ def solve_problem_with_intermediate_iterates(
 ) -> List[VariableValues]:
     iterates = []
     model_vars = VariableCollection(dim=data.dimension)
+    model = gp.Model()
     initialize_model(model_vars, model, data, relaxation_type)
     curr_iter = 0
     while not finished_solving:
@@ -542,6 +543,8 @@ if __name__ == "__main__":
     from os.path import expanduser, join
 
     grid_len = 70
+    num_timesteps = 1000
+    num_robots = 4
 
     def _sample_slam_problem() -> FactorGraphData:
         from manhattan.simulator.simulator import ManhattanSimulator, SimulationParams
@@ -553,10 +556,9 @@ if __name__ == "__main__":
         pos_stddev = 0.1
         theta_stddev = 0.1
         seed_cnt = 0
-        num_timesteps = 1000
 
         sim_args = SimulationParams(
-            num_robots=4,
+            num_robots=num_robots,
             num_beacons=num_beacons,
             grid_shape=(grid_len, grid_len),
             y_steps_to_intersection=2,
@@ -617,46 +619,8 @@ if __name__ == "__main__":
 
     start_time = perf_counter()
 
-    model = gp.Model("test")
-    model.Params.OutputFlag = 0
-    relaxation_type = "SOCP"
     relaxation_type = "QCQP"
-    model_vars = VariableCollection(dim=fg.dimension)
-    initialize_model(model_vars, model, fg, relaxation_type)
-    while not finished_solving:
-        model.Params.BarIterLimit = curr_iter
-        model.optimize()
-
-        # check if solver done
-        if model.status != GRB.Status.ITERATION_LIMIT:
-            finished_solving = True
-
-        # get the SolverResults
-        curr_sol_vals = model_vars.get_variable_values()
-        solve_time = model.Runtime
-        solved = model.status == GRB.Status.OPTIMAL
-        solve_results = SolverResults(
-            variables=curr_sol_vals,
-            total_time=solve_time,
-            solved=solved,
-            pose_chain_names=pose_chain_names,
-        )
-
-        # save to TUM
-        tum_fpath = join(save_dir, relaxation_type, f"sol_{curr_iter}.tum")
-        save_to_tum(solve_results, tum_fpath)
-
-        iterations_to_keep = [1, 2, 3, 4, 5, 8, 12]
-        if curr_iter in iterations_to_keep:
-            two_digit_iter = f"{curr_iter:02d}"
-            viz_fpath = join(save_dir, relaxation_type, f"sol_{two_digit_iter}.png")
-            visualize_solution(
-                solve_results,
-                xlim=(-2, grid_len + 2),
-                ylim=(-2, grid_len + 2),
-                save_path=viz_fpath,
-            )
-        curr_iter += 1
+    score_results = solve_problem(fg, relaxation_type)
 
     end_time = perf_counter()
     print(f"Total time ({relaxation_type}): {end_time - start_time} seconds")
