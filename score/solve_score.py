@@ -10,7 +10,7 @@ field_styles = {
     "name": {"color": "blue"},
 }
 coloredlogs.install(
-    level="INFO",
+    level="WARNING",
     fmt="[%(filename)s:%(lineno)d] %(name)s %(levelname)s - %(message)s",
     field_styles=field_styles,
 )
@@ -31,6 +31,7 @@ import score.utils.drake_utils as du
 from score.utils.solver_utils import (
     ScoreSolverParams,
 )
+
 
 def _check_factor_graph(data: FactorGraphData):
     unconnected_variables = data.unconnected_variable_names
@@ -171,13 +172,9 @@ def solve_score(
     model = MathematicalProgram()
 
     # Add variables
-    translations, rotations = du.add_pose_variables(
-        model, data
-    )
+    translations, rotations = du.add_pose_variables(model, data)
     landmarks = du.add_landmark_variables(model, data)
-    distances = du.add_distance_variables(
-        model, data, translations, landmarks
-    )
+    distances = du.add_distance_variables(model, data, translations, landmarks)
 
     # initialize the variables based on the solver params
     _initialize_variables(

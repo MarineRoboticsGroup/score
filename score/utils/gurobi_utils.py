@@ -17,14 +17,21 @@ from py_factor_graph.utils.solver_utils import (
     save_to_tum,
 )
 from py_factor_graph.utils.plot_utils import visualize_solution
-from py_factor_graph.utils.matrix_utils import round_to_special_orthogonal
+from py_factor_graph.utils.matrix_utils import (
+    round_to_special_orthogonal,
+    get_random_rotation_matrix,
+)
 from attrs import define, field, validators
 
-acceptable_relaxations = ["SOCP", "QCQP"]
+SOCP_RELAXATION = "SOCP"
+QCQP_RELAXATION = "QCQP"
+ACCEPTABLE_RELAXATIONS = [SOCP_RELAXATION, QCQP_RELAXATION]
 
-# import logging
-
-# logger = logging.getLogger(__name__)
+RANDOM_INIT = "random"
+ZERO_INIT = "zero"
+ODOM_INIT = "odom"
+GT_INIT = "gt"
+ACCEPTABLE_INIT = [RANDOM_INIT, ZERO_INIT, ODOM_INIT, GT_INIT]
 
 
 def is_dimension(instance, attribute, value) -> None:
@@ -130,10 +137,10 @@ class VariableCollection:
 
 
 def _check_valid_relaxation(relaxation: str):
-    if relaxation not in acceptable_relaxations:
+    if relaxation not in ACCEPTABLE_RELAXATIONS:
         raise ValueError(
             f"Relaxation {relaxation} is not supported. "
-            f"Acceptable relaxations are {acceptable_relaxations}"
+            f"Acceptable relaxations are {ACCEPTABLE_RELAXATIONS}"
         )
 
 
@@ -177,6 +184,7 @@ def initialize_model(
     add_distance_constraints(variables, model, relaxation_type)
     cost = get_full_cost_objective(variables, fg, relaxation_type)
     model.setObjective(cost)
+    model.update()
 
 
 def _extract_solver_results(
@@ -195,9 +203,21 @@ def _extract_solver_results(
     return solve_results
 
 
+def _get_model() -> gp.Model:
+    model = gp.Model()
+    model.Params.OutputFlag = 0
+    # model.Params.Aggregate = 0
+    # model.Params.AggFill = 0
+    # model.Params.Presolve = 0
+    model.Params.BarQCPConvTol = 1e-1
+    # model.Params.ScaleFlag = 2
+
+    return model
+
+
 def solve_problem(data: FactorGraphData, relaxation_type: str) -> SolverResults:
     variables = VariableCollection(data.dimension)
-    model = gp.Model()
+    model = _get_model()
     initialize_model(variables, model, data, relaxation_type)
     model.optimize()
     return _extract_solver_results(model, variables, data)
@@ -205,12 +225,13 @@ def solve_problem(data: FactorGraphData, relaxation_type: str) -> SolverResults:
 
 def solve_problem_with_intermediate_iterates(
     data: FactorGraphData, relaxation_type: str
-) -> List[VariableValues]:
+) -> List[SolverResults]:
     iterates = []
     model_vars = VariableCollection(dim=data.dimension)
-    model = gp.Model()
+    model = _get_model()
     initialize_model(model_vars, model, data, relaxation_type)
     curr_iter = 0
+    finished_solving = False
     while not finished_solving:
         model.Params.BarIterLimit = curr_iter
         model.optimize()
@@ -287,7 +308,7 @@ def add_distance_variables(
         Dict[Tuple[str, str], np.ndarray]: The dict of variables representing
         the distances between the robot's landmarks and the landmarks.
     """
-    assert relaxation_type in acceptable_relaxations
+    assert relaxation_type in ACCEPTABLE_RELAXATIONS
 
     distances: Dict[Tuple[str, str], np.ndarray] = {}
     num_range_measures = len(fg.range_measurements)
@@ -319,7 +340,6 @@ def add_distance_variables(
     else:
         raise ValueError(f"Relaxation type {relaxation_type} not supported")
 
-    # logger.info("Done adding distance variables")
     return distances
 
 
@@ -568,7 +588,7 @@ if __name__ == "__main__":
             range_sensing_radius=100.0,
             false_range_data_association_prob=0.0,
             outlier_prob=0.0,
-            max_num_loop_closures=100,
+            max_num_loop_closures=0,
             loop_closure_prob=0.05,
             loop_closure_radius=20.0,
             false_loop_closure_prob=0.0,
@@ -617,10 +637,5 @@ if __name__ == "__main__":
 
     from time import perf_counter
 
-    start_time = perf_counter()
-
     relaxation_type = "QCQP"
-    score_results = solve_problem(fg, relaxation_type)
-
-    end_time = perf_counter()
-    print(f"Total time ({relaxation_type}): {end_time - start_time} seconds")
+    score_results = solve_problem_with_intermediate_iterates(fg, relaxation_type)
