@@ -22,7 +22,7 @@ We show the key results from our paper, comparing SCORE to a range of other init
 - SCORE: our method, using a second-order cone program for initialization
 - Odom: initializing with robot odometry
 
-### Simulated Single-Robot Experiments
+### Simulated Multi-Robot Experiments
 
 <img src="media/MultiTrajsV4.png" width="850"/>
 
