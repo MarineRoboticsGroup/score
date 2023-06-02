@@ -5,10 +5,10 @@ Code to solve a second-order cone program to initialize a local-search solver
 for the range-aided SLAM problem. The SOCP is a convex relaxation of the
 original problem.
 
-Check out the extended version of our [paper](https://arxiv.org/abs/2210.03177)
-
+Check out the extended version of our [paper](https://arxiv.org/abs/2210.03177) or our [short video summary](https://www.youtube.com/watch?v=M1K6GTNm0fI&ab_channel=MITMarineRoboticsGroup).
 
 <img src="media/title_figure.png" width="700"/>
+<img src="media/20robot_animation.gif" width="700"/>
 
 
 ## Results
@@ -48,7 +48,7 @@ to run this on your own data.
 
 ## Dependencies
 
-### PyFactorGraph
+### PyFactorGraph (Required)
 
 [Link to the repo](https://github.com/MarineRoboticsGroup/PyFactorGraph)
 
@@ -57,25 +57,14 @@ This is a custom library developed in the Marine Robotics Group at MIT to
 interface with a broader range of SLAM file types (e.g. g2o). You can install 
 directly from source via `pip install .` inside the root of this repo.
 
-### Drake Dependency (read carefully)
-
-Drake is a wonderful piece of software... once it's installed. Installing the
-python bindings for Drake can be a hassle. We will have to build Drake from
-source to use the `Gurobi` solver, which is the real reason we are using Drake
-(it gives us a great interface to the solver). Make sure that you have Gurobi
-properly set up before doing any of this.
-
-Useful links
-
-- <https://drake.mit.edu/from_source.html#mandatory-platform-specific-instructions>
-- <https://drake.mit.edu/bazel.html#proprietary-solvers>
-- <https://drake.mit.edu/pydrake/pydrake.solvers.gurobi.html>
-
 ### evo (optional)
 
 We use [evo](https://github.com/MichaelGrupp/evo) to perform visualization of our results and highly recommend it.
 
+`pip install evo`
+
 ### GTSAM (optional)
 
-We used GTSAM to refine our initial estimates provided by SCORE. We recommend 
-installing via `pip install gtsam==4.1.0`.
+We used GTSAM to refine our initial estimates provided by SCORE in the experiments seen.
+
+`pip install gtsam`
