@@ -43,7 +43,7 @@ We show the key results from our paper, comparing SCORE to a range of other init
 
 ## Usage
 
-Feel free to look inside our `/examples` directory. You can also directly call `python3 score/solve_score.py` 
+Feel free to look inside our `/examples` directory. You can also directly call `python3 score/solve_score.py`
 to run this on your own data.
 
 ## Dependencies
@@ -53,8 +53,8 @@ to run this on your own data.
 [Link to the repo](https://github.com/MarineRoboticsGroup/PyFactorGraph)
 
 This holds all of the measurements/variables to define our RA-SLAM problem.
-This is a custom library developed in the Marine Robotics Group at MIT to 
-interface with a broader range of SLAM file types (e.g. g2o). You can install 
+This is a custom library developed in the Marine Robotics Group at MIT to
+interface with a broader range of SLAM file types (e.g. g2o). You can install
 directly from source via `pip install .` inside the root of this repo.
 
 ### Drake Dependency (read carefully)
@@ -77,5 +77,5 @@ We use [evo](https://github.com/MichaelGrupp/evo) to perform visualization of ou
 
 ### GTSAM (optional)
 
-We used GTSAM to refine our initial estimates provided by SCORE. We recommend 
+We used GTSAM to refine our initial estimates provided by SCORE. We recommend
 installing via `pip install gtsam==4.1.0`.

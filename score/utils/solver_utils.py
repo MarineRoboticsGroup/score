@@ -69,16 +69,3 @@ def print_state(
         + f" | Rotation: {theta_solve:.2f}"
     )
     logger.info(status)
-
-
-def check_rotations(result, rotations: Dict[str, np.ndarray]):
-    """
-    checks that results are valid rotations
-
-    Args:
-        result (Drake Result Object): the result of the solution
-        rotations (Dict[str, np.ndarray]): the rotation variables
-    """
-    for rot_key in rotations.keys():
-        rot_result = result.GetSolution(rotations[rot_key])
-        _check_rotation_matrix(rot_result)

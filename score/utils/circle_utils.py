@@ -24,7 +24,7 @@ class Point:
 
     @property
     def distance(self):
-        return np.sqrt(self.x ** 2 + self.y ** 2)
+        return np.sqrt(self.x**2 + self.y**2)
 
     def is_close(self, other: "Point", tol: float = 0.01) -> bool:
         return abs(self.x - other.x) < tol and abs(self.y - other.y) < tol
@@ -398,8 +398,8 @@ class Circle:
             print("Circles nested inside eachother")
             return None
 
-        l = (self.radius ** 2 - other.radius ** 2 + d ** 2) / (2 * d)
-        h = np.sqrt(self.radius ** 2 - l ** 2)
+        l = (self.radius**2 - other.radius**2 + d**2) / (2 * d)
+        h = np.sqrt(self.radius**2 - l**2)
 
         x_int_base = self.x + l * (other.x - self.x) / d
         x_int_1 = x_int_base + h * (other.y - self.y) / d

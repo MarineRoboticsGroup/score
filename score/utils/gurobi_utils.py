@@ -187,7 +187,7 @@ def initialize_model(
     model.update()
 
 
-def _extract_solver_results(
+def extract_solver_results(
     model: gp.Model, vars: VariableCollection, data: FactorGraphData
 ) -> SolverResults:
     solver_vals = vars.get_variable_values()
@@ -203,7 +203,7 @@ def _extract_solver_results(
     return solve_results
 
 
-def _get_model() -> gp.Model:
+def get_model() -> gp.Model:
     model = gp.Model()
     model.Params.OutputFlag = 0
     # model.Params.Aggregate = 0
@@ -213,39 +213,6 @@ def _get_model() -> gp.Model:
     # model.Params.ScaleFlag = 2
 
     return model
-
-
-def solve_problem(data: FactorGraphData, relaxation_type: str) -> SolverResults:
-    variables = VariableCollection(data.dimension)
-    model = _get_model()
-    initialize_model(variables, model, data, relaxation_type)
-    model.optimize()
-    return _extract_solver_results(model, variables, data)
-
-
-def solve_problem_with_intermediate_iterates(
-    data: FactorGraphData, relaxation_type: str
-) -> List[SolverResults]:
-    iterates = []
-    model_vars = VariableCollection(dim=data.dimension)
-    model = _get_model()
-    initialize_model(model_vars, model, data, relaxation_type)
-    curr_iter = 0
-    finished_solving = False
-    while not finished_solving:
-        model.Params.BarIterLimit = curr_iter
-        model.optimize()
-
-        # check if solver done
-        if model.status != GRB.Status.ITERATION_LIMIT:
-            finished_solving = True
-
-        curr_solver_results = _extract_solver_results(model, model_vars, data)
-        iterates.append(curr_solver_results)
-
-        curr_iter += 1
-
-    return iterates
 
 
 ##### set up variables #####
@@ -557,85 +524,3 @@ def get_relative_pose_cost_expression(
     rot_obj = tau_ij * mat_frob_norm_sq(diff_rot_matrix)
 
     return rot_obj + trans_obj
-
-
-if __name__ == "__main__":
-    from os.path import expanduser, join
-
-    grid_len = 70
-    num_timesteps = 1000
-    num_robots = 4
-
-    def _sample_slam_problem() -> FactorGraphData:
-        from manhattan.simulator.simulator import ManhattanSimulator, SimulationParams
-
-        show_animation = False
-        num_beacons = 0
-        range_prob = 0.25
-        dist_stddev = 0.1
-        pos_stddev = 0.1
-        theta_stddev = 0.1
-        seed_cnt = 0
-
-        sim_args = SimulationParams(
-            num_robots=num_robots,
-            num_beacons=num_beacons,
-            grid_shape=(grid_len, grid_len),
-            y_steps_to_intersection=2,
-            x_steps_to_intersection=5,
-            cell_scale=1.0,
-            range_sensing_prob=range_prob,
-            range_sensing_radius=100.0,
-            false_range_data_association_prob=0.0,
-            outlier_prob=0.0,
-            max_num_loop_closures=0,
-            loop_closure_prob=0.05,
-            loop_closure_radius=20.0,
-            false_loop_closure_prob=0.0,
-            range_stddev=dist_stddev,
-            odom_x_stddev=pos_stddev,
-            odom_y_stddev=pos_stddev,
-            odom_theta_stddev=theta_stddev,
-            loop_x_stddev=pos_stddev,
-            loop_y_stddev=pos_stddev,
-            loop_theta_stddev=theta_stddev,
-            debug_mode=False,
-            seed_num=(seed_cnt + 1) * 9999,
-            groundtruth_measurements=True,
-            # no_loop_pose_idx=[0, 1, 2],
-            # exclude_last_n_poses_for_loop_closure=2
-        )
-        sim = ManhattanSimulator(sim_args)
-
-        if show_animation:
-            sim.plot_grid()
-            sim.plot_beacons()
-
-        for _ in range(num_timesteps):
-            sim.random_step()
-
-            if show_animation:
-                sim.plot_robot_states()
-                sim.show_plot(animation=True)
-
-        if show_animation:
-            sim.close_plot()
-
-        sim._factor_graph.print_summary()
-        return sim._factor_graph
-
-    fg = _sample_slam_problem()
-    pose_chain_names = fg.get_pose_chain_names()
-
-    curr_iter = 0
-    finished_solving = False
-    save_dir = expanduser("~/data/test_slam_problem")
-    import os
-
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-
-    from time import perf_counter
-
-    relaxation_type = "QCQP"
-    score_results = solve_problem_with_intermediate_iterates(fg, relaxation_type)
