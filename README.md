@@ -46,23 +46,22 @@ Feel free to look inside our `/examples` directory!
 
 ## Dependencies
 
-### PyFactorGraph (Required)
+### PyFactorGraph (required)
 
 [Link to the repo](https://github.com/MarineRoboticsGroup/PyFactorGraph)
 
 This holds all of the measurements/variables to define our RA-SLAM problem.
 This is a custom library developed in the Marine Robotics Group at MIT to
 interface with a broader range of SLAM file types (e.g. g2o). You can install
-directly from source via `pip install .` inside the root of this repo.
+directly from source via:
 
-### evo (optional)
-
-We use [evo](https://github.com/MichaelGrupp/evo) to perform visualization of our results and highly recommend it.
-
-`pip install evo`
+```bash
+cd ~/<repo_parent_directory>/PyFactorGraph
+pip install .
+```
 
 ### GTSAM (optional)
 
-We used GTSAM to refine our initial estimates provided by SCORE in the experiments seen.
+We used GTSAM to refine our initial estimates provided by SCORE in the experiments in our paper.
 
 `pip install gtsam`
