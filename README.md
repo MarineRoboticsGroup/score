@@ -1,6 +1,5 @@
 # SCORE: Second Order Conic Initialization for RA-SLAM
 
-
 Code to solve a second-order cone program to initialize a local-search solver
 for the range-aided SLAM problem. The SOCP is a convex relaxation of the
 original problem.
@@ -43,8 +42,7 @@ We show the key results from our paper, comparing SCORE to a range of other init
 
 ## Usage
 
-Feel free to look inside our `/examples` directory. You can also directly call `python3 score/solve_score.py`
-to run this on your own data.
+Feel free to look inside our `/examples` directory!
 
 ## Dependencies
 

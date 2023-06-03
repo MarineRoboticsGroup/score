@@ -61,7 +61,6 @@ def _check_solution_quality(result, rotations):
 def solve_score(
     data: FactorGraphData,
     solver_params: ScoreSolverParams,
-    results_filepath: str,
     relaxation_type: str = gu.QCQP_RELAXATION,
 ) -> SolverResults:
     """

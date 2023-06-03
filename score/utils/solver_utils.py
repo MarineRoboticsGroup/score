@@ -35,7 +35,6 @@ class ScoreSolverParams:
             "random",
             "none",
             "custom",
-            "double_solve_custom",
         ]
         assert (
             value in init_options
