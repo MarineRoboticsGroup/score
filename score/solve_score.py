@@ -22,9 +22,6 @@ from py_factor_graph.utils.matrix_utils import get_matrix_determinant
 
 
 import score.utils.gurobi_utils as gu
-from score.utils.solver_utils import (
-    ScoreSolverParams,
-)
 from gurobipy import GRB
 
 
@@ -56,7 +53,6 @@ def _check_solution_quality(result, rotations):
 
 def solve_score(
     data: FactorGraphData,
-    solver_params: ScoreSolverParams,
     relaxation_type: str = gu.QCQP_RELAXATION,
 ) -> SolverResults:
     """
@@ -65,7 +61,6 @@ def solve_score(
 
     args:
         data (FactorGraphData): the data describing the problem
-        solver_params (ScoreSolverParams): the parameters for the solver
         results_filepath (str): where to save the results
 
     returns:
@@ -73,7 +68,6 @@ def solve_score(
     """
 
     _check_factor_graph(data)
-    logger.debug(f"Running SCORE solver with params: {solver_params}")
 
     variables = gu.VariableCollection(data.dimension)
     model = gu.get_model()
