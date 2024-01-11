@@ -22,7 +22,7 @@ from py_factor_graph.utils.matrix_utils import get_matrix_determinant
 
 
 import score.utils.gurobi_utils as gu
-from gurobipy import GRB
+from gurobipy import GRB, GurobiError
 
 
 def _check_factor_graph(data: FactorGraphData):
@@ -72,7 +72,17 @@ def solve_score(
     variables = gu.VariableCollection(data.dimension)
     model = gu.get_model()
     gu.initialize_model(variables, model, data, relaxation_type)
-    model.optimize()
+    try:
+        model.optimize()
+    except GurobiError as e:
+        # set the nonconvex parameter to 2 and try again
+        logger.warning(
+            f"GurobiError: {e}. "
+            "If the problem is just slightly non-convex, this may be because of numerical issues. "
+            "Resolving with nonconvex parameter set to 2."
+        )
+        model.setParam(GRB.Param.NonConvex, 2)
+        model.optimize()
     return gu.extract_solver_results(model, variables, data)
 
 

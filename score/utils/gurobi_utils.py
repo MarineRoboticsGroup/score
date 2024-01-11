@@ -285,7 +285,7 @@ def add_distance_variables(
     # if we are using the SOCP relaxation then we get all keys and use a single
     # call to instantiate all variables. Otherwise, as the distance variables
     # are matrices, we will have to instantiate them one by one.
-    dist_keys = [(meas.pose_key, meas.landmark_key) for meas in fg.range_measurements]
+    dist_keys = [(meas.first_key, meas.second_key) for meas in fg.range_measurements]
     if relaxation_type == "SOCP":
         dist_vars = mod.addVars(
             dist_keys,
@@ -461,7 +461,7 @@ def get_all_range_costs(
     """
     cost = 0.0
     for range_measure in data.range_measurements:
-        dist_key = (range_measure.pose_key, range_measure.landmark_key)
+        dist_key = (range_measure.first_key, range_measure.second_key)
         cost += get_single_range_cost(
             variables.get_translation_var(dist_key[0]),
             variables.get_translation_var(dist_key[1]),
